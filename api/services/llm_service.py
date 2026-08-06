@@ -12,7 +12,11 @@ Set OPENAI_API_KEY, and optionally OPENAI_BASE_URL and OPENAI_MODEL
 in your .env file. Settings are loaded by ``api.config.Settings``.
 """
 
+import json
+from typing import cast
+
 from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessageParam
 
 from api.config import get_settings
 
@@ -62,7 +66,49 @@ async def analyze_journal_entry(
       4. Parse the assistant's JSON response with ``json.loads()``.
       5. Return a dict with ``entry_id``, ``sentiment``, ``summary``, ``topics``.
     """
-    raise NotImplementedError(
-        "Task 4: implement analyze_journal_entry using the openai SDK. "
-        "See tests/test_llm_service.py for the test contract."
+
+    if client is None:
+        client = _default_client()
+
+    settings = get_settings()
+
+    messages: list[ChatCompletionMessageParam] = [
+        cast(
+            ChatCompletionMessageParam,
+            {
+                "role": "system",
+                "content": (
+                    "You are a helpful journal analysis assistant. "
+                    "Return valid JSON with sentiment, summary, and topics keys."
+                ),
+            },
+        ),
+        cast(
+            ChatCompletionMessageParam,
+            {
+                "role": "user",
+                "content": (
+                    "Analyze the following journal entry and return valid JSON.\n\n"
+                    f"Entry:\n{entry_text}"
+                ),
+            },
+        ),
+    ]
+
+    response = await client.chat.completions.create(
+        model=settings.openai_model,
+        messages=messages,
+        temperature=0.2,
     )
+
+    content = response.choices[0].message.content
+    if not isinstance(content, str) or not content.strip():
+        raise ValueError("LLM returned an empty response")
+
+    payload = json.loads(content)
+    return {
+        "entry_id": entry_id,
+        "sentiment": payload["sentiment"],
+        "summary": payload["summary"],
+        "topics": payload["topics"],
+    }

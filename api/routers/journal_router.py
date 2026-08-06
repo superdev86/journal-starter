@@ -59,17 +59,11 @@ async def update_entry(
     entry_update: EntryUpdate,
     entry_service: EntryService = Depends(get_entry_service),
 ):
-    """Update a journal entry.
+    update_payload = entry_update.model_dump(exclude_unset=True)
 
-    TODO (Task 3): Replace ``entry_update: dict`` with ``entry_update: EntryUpdate``
-    (import it from ``api.models.entry``) so PATCH requests are validated the
-    same way POST requests are. Without this, PATCH happily accepts
-    empty strings and 300-character bodies — see ``TestUpdateEntry`` in
-    tests/test_api.py.
-    """
     result = await entry_service.update_entry(
         entry_id,
-        entry_update.model_dump(),
+        update_payload,
     )
     if not result:
         raise HTTPException(status_code=404, detail="Entry not found")
