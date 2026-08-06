@@ -102,3 +102,6 @@ class Entry(BaseModel):
         default_factory=lambda: datetime.now(UTC),
         description="Timestamp when the entry was last updated.",
     )
+
+
+# testing
